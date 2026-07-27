@@ -6,6 +6,7 @@ import MenuBar, { useClock } from "./components/MenuBar.jsx";
 import ControlCenter from "./components/ControlCenter.jsx";
 import NotificationCenter from "./components/NotificationCenter.jsx";
 import Spotlight from "./components/Spotlight.jsx";
+import BootScreen, { alreadyBooted } from "./components/BootScreen.jsx";
 import {
   AboutMac,
   Album,
@@ -53,6 +54,9 @@ export default function App() {
   const [topZ, setTopZ] = useState(20);
   const [zmap, setZmap] = useState({});
   const [focused, setFocused] = useState(null);
+
+  /* ----- boot ----- */
+  const [booting, setBooting] = useState(() => !alreadyBooted());
 
   /* ----- system chrome ----- */
   const now = useClock();
@@ -666,6 +670,8 @@ export default function App() {
       />
 
       <Dock apps={dockApps} />
+
+      {booting && <BootScreen onDone={() => setBooting(false)} />}
 
       {asleep && (
         <div

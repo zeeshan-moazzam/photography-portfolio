@@ -72,7 +72,10 @@ body,
 body {
   font-family: var(--font-body);
   color: var(--text-primary);
-  background: #000;
+  /* Only ever visible in the gap before React mounts, so it matches the boot
+     wallpaper's flat grey rather than the desktop — every full-page surface
+     (.desktop, .work-page) paints its own background over this. */
+  background: #c8c8cb;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.02em;
@@ -2338,4 +2341,61 @@ body.is-resizing {
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: -12px;
+}
+
+/* =========================================================
+   BOOT SCREEN
+   Sits above everything (the sleep screen is 9000). A cursive
+   "hello" writes itself over the boot wallpaper, then the whole
+   panel slides up off the top to reveal the desktop.
+   ========================================================= */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* background-color is the wallpaper's own flat grey, so the panel is the
+     right colour for the frame or two before the image decodes. */
+  background: #c8c8cb url("/background.png") center / cover no-repeat;
+  color: rgb(10, 10, 12);
+  will-change: transform;
+  transition: transform 0.9s cubic-bezier(0.7, 0, 0.2, 1);
+}
+
+/* Travels a hair past 100% so the bottom edge clears the viewport cleanly. */
+.boot.is-leaving {
+  transform: translateY(-102%);
+  pointer-events: none;
+}
+
+.boot__hello {
+  /* The mark is ~3.1:1, so it takes more width than height to read at size. */
+  width: min(56vw, 540px);
+  height: auto;
+  /* Lifted slightly above centre — optically centred, the way macOS sets it. */
+  margin-bottom: 4vh;
+  overflow: visible;
+}
+
+@keyframes boot-write {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot {
+    transition: opacity 0.35s ease;
+  }
+
+  .boot.is-leaving {
+    transform: none;
+    opacity: 0;
+  }
+
+  .boot__hello path {
+    animation-duration: 400ms !important;
+  }
 }
