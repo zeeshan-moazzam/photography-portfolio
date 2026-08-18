@@ -7,8 +7,8 @@ import { about, albums } from "../data.js";
    desktop wallpaper and the first frame of each album decode while the mark is
    being drawn, so the desktop paints finished rather than half-loaded. */
 
-const DRAW_MS = 2400; // time for the stroke to write itself
-const HOLD_MS = 1520; // beat after the last stroke lands, before the panel moves
+const DRAW_MS = 2800; // time for the stroke to write itself
+const HOLD_MS = 1200; // beat after the last stroke lands, before the panel moves
 const SLIDE_MS = 900; // panel travelling off the top
 const MAX_MS = 7000; // never hold the desktop hostage to a slow image
 
@@ -41,14 +41,13 @@ const prefersReducedMotion = () =>
 
 export default function BootScreen({ onDone }) {
   const [leaving, setLeaving] = useState(false);
-  const [length, setLength] = useState(0);
-  const pathRef = useRef(null);
+  const [lengths, setLengths] = useState([]);
+  const pathRefs = useRef([]);
 
-  /* Measure the stroke so the dash animation is exact regardless of viewBox
+  /* Measure the strokes so the dash animation is exact regardless of viewBox
      scaling — a hard-coded dasharray drifts the moment the path is edited. */
   useLayoutEffect(() => {
-    const path = pathRef.current;
-    if (path) setLength(path.getTotalLength());
+    setLengths(pathRefs.current.map((p) => p.getTotalLength()));
   }, []);
 
   /* Leave once the mark has finished writing *and* the images have settled,
@@ -95,84 +94,65 @@ export default function BootScreen({ onDone }) {
 
   return (
     <div className={"boot" + (leaving ? " is-leaving" : "")} aria-hidden="true">
-      <Hello pathRef={pathRef} length={length} />
+      <Hello pathRefs={pathRefs} lengths={lengths} />
     </div>
   );
 }
 
-/* The mark itself: one unbroken cursive stroke, written in pen order — h's
-   ascender loop, e, the two l's, then the o and its exit flourish. Laid out on a
-   200 baseline / 118 x-height / 42 ascender grid and sheared 4° right, so the
-   viewBox below frames the ink with an even margin on all four sides. Kept as
-   waypoint-smooth cubics rather than a font glyph because the write-on animation
-   needs a centreline to trace, not a filled outline. */
-const HELLO_D = [
-  /* h */
-  "M 50 196 C 53 190 62 172 69 158 C 76 144 85 125 92 110 C 100 95 108 78 113 68",
-  "C 119 58 125 55 127 50 C 128 45 126 39 124 36 C 121 33 114 31 110 32",
-  "C 105 33 101 35 97 40 C 93 45 87 54 86 62 C 84 70 86 79 88 86 C 90 93 96 99 99 106",
-  "C 101 113 103 119 105 128 C 107 137 109 149 111 158 C 113 167 113 174 115 180",
-  "C 118 186 121 191 124 194 C 128 197 134 201 138 200 C 142 199 147 194 151 190",
-  "C 154 186 156 182 159 175 C 161 168 162 156 165 148 C 167 140 170 133 173 128",
-  "C 176 123 180 120 184 118 C 188 117 193 117 197 119 C 200 121 202 126 204 132",
-  "C 205 138 205 148 205 156 C 205 164 205 171 205 178 C 204 185 198 196 204 196",
-  /* e */
-  "C 211 196 233 184 242 176 C 251 168 254 158 260 150 C 265 142 271 135 275 130",
-  "C 279 125 281 123 282 120 C 282 117 280 112 277 110 C 274 108 269 107 264 108",
-  "C 260 109 256 111 252 115 C 248 119 242 125 239 130 C 236 135 233 142 233 147",
-  "C 232 152 233 156 235 162 C 236 168 238 176 241 182 C 245 188 250 193 256 196",
-  "C 262 199 270 200 277 199 C 284 198 291 195 297 192 C 302 189 306 188 311 180",
-  /* l */
-  "C 317 172 322 159 328 146 C 334 133 342 114 349 100 C 356 86 363 72 368 64",
-  "C 372 56 376 55 377 50 C 378 45 376 39 374 36 C 371 33 364 31 360 32",
-  "C 355 33 351 35 347 40 C 343 45 337 54 336 62 C 334 70 336 79 338 86",
-  "C 340 93 346 99 349 106 C 351 113 353 119 355 128 C 357 137 359 149 361 158",
-  "C 363 167 363 174 365 180 C 368 186 371 191 374 194 C 378 197 384 201 388 200",
-  "C 392 199 397 194 401 190 C 405 186 408 183 412 176",
-  /* l */
-  "C 416 169 418 159 424 146 C 429 133 438 114 445 100 C 452 86 459 72 464 64",
-  "C 468 56 472 55 473 50 C 474 45 472 39 470 36 C 467 33 460 31 456 32",
-  "C 451 33 447 35 443 40 C 439 45 433 54 432 62 C 430 70 432 79 434 86",
-  "C 436 93 442 99 445 106 C 447 113 449 119 451 128 C 453 137 455 149 457 158",
-  "C 459 167 459 174 461 180 C 464 186 467 191 470 194 C 474 197 480 201 484 200",
-  "C 488 199 493 194 497 190 C 501 186 503 181 508 176",
-  /* o, then the tail */
-  "C 512 171 517 165 523 158 C 529 151 536 142 543 136 C 549 130 555 126 560 122",
-  "C 564 118 568 117 568 114 C 568 111 565 107 561 106 C 557 105 550 105 545 107",
-  "C 539 109 532 113 528 118 C 523 123 519 131 516 138 C 514 145 513 151 513 158",
-  "C 513 165 513 174 515 180 C 518 186 524 193 530 196 C 536 199 545 199 552 198",
-  "C 559 197 567 193 573 189 C 579 185 584 180 588 174 C 592 168 595 160 595 153",
-  "C 596 146 593 138 591 133 C 588 128 580 124 579 124 C 579 124 582 132 586 135",
-  "C 590 138 597 143 603 144 C 609 145 618 143 624 139 C 631 135 640 123 644 120",
-].join(" ");
+/* Geometry and stroke timing lifted from the AppleHelloEffect Framer component
+   (framer.com/m/AppleHelloEffect-5Xzz.js), on its own 638x200 viewBox. Two
+   strokes in pen order: the h's ascender, then one unbroken run through the rest
+   of the word. `at`/`for` are fractions of DRAW_MS, so the component's 0.7s lead
+   and 0.8s/2.8s stroke lengths keep their proportions at any total duration. */
+const APPLE_TOTAL = 3.5;
+const HELLO_STROKES = [
+  {
+    at: 0,
+    for: 0.8 / APPLE_TOTAL,
+    d: "M8.69214 166.553C36.2393 151.239 61.3409 131.548 89.8191 98.0295C109.203 75.1488 119.625 49.0228 120.122 31.0026C120.37 17.6036 113.836 7.43883 101.759 7.43883C88.3598 7.43883 79.9231 17.6036 74.7122 40.9363C69.005 66.5793 64.7866 96.0036 54.1166 190.356",
+  },
+  {
+    at: 0.7 / APPLE_TOTAL,
+    for: 2.8 / APPLE_TOTAL,
+    d: "M55.1624 181.135C60.6251 133.114 81.4118 98.0479 107.963 98.0479C123.844 98.0479 133.937 110.703 131.071 128.817C129.457 139.487 127.587 150.405 125.408 163.06C122.869 178.941 130.128 191.348 152.122 191.348C184.197 191.348 219.189 173.523 237.097 145.915C243.198 136.509 245.68 128.073 245.928 119.884C246.176 104.996 237.739 93.8296 222.851 93.8296C203.992 93.8296 189.6 115.17 189.6 142.465C189.6 171.745 205.481 192.341 239.208 192.341C285.066 192.341 335.86 137.292 359.199 75.8585C365.788 58.513 368.26 42.4065 368.26 31.1512C368.26 17.8057 364.042 7.55823 352.131 7.55823C340.469 7.55823 332.777 16.6141 325.829 30.9129C317.688 47.4967 311.667 71.4162 309.203 98.4549C303 166.301 316.896 191.348 349.936 191.348C390 191.348 434.542 135.534 457.286 75.6686C463.803 58.513 466.275 42.4065 466.275 31.1512C466.275 17.8057 462.057 7.55823 450.146 7.55823C438.484 7.55823 430.792 16.6141 423.844 30.9129C415.703 47.4967 409.682 71.4162 407.218 98.4549C401.015 166.301 414.911 191.348 444.416 191.348C473.874 191.348 489.877 165.67 499.471 138.402C508.955 111.447 520.618 94.8221 544.935 94.8221C565.035 94.8221 580.916 109.71 580.916 137.75C580.916 168.768 560.792 192.093 535.362 192.341C512.984 192.589 498.285 174.475 499.774 147.179C501.511 116.907 519.873 94.8221 543.943 94.8221C557.839 94.8221 569.51 100.999 578.682 107.725C603.549 125.866 622.709 114.656 630.047 96.7186",
+  },
+];
 
-/* One continuous script stroke. Drawn with a dash offset that unwinds to zero,
-   which reads as a pen moving across the wallpaper. */
-function Hello({ pathRef, length }) {
-  const style = length
-    ? {
-        strokeDasharray: length,
-        strokeDashoffset: length,
-        animation: `boot-write ${DRAW_MS}ms cubic-bezier(0.55, 0.02, 0.36, 1) forwards`,
-      }
-    : { opacity: 0 };
-
+/* Each stroke is drawn with a dash offset that unwinds to zero, which reads as a
+   pen moving across the wallpaper. */
+function Hello({ pathRefs, lengths }) {
   return (
     <svg
       className="boot__hello"
-      viewBox="33 15 628 202"
+      viewBox="0 0 638 200"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path
-        ref={pathRef}
-        style={style}
-        stroke="currentColor"
-        strokeWidth="23"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d={HELLO_D}
-      />
+      {HELLO_STROKES.map((stroke, i) => {
+        const length = lengths[i];
+        const style = length
+          ? {
+              strokeDasharray: length,
+              strokeDashoffset: length,
+              animation: `boot-write ${stroke.for * DRAW_MS}ms ease-in-out ${
+                stroke.at * DRAW_MS
+              }ms forwards`,
+            }
+          : { opacity: 0 };
+
+        return (
+          <path
+            key={i}
+            ref={(el) => (pathRefs.current[i] = el)}
+            style={style}
+            stroke="currentColor"
+            strokeWidth="14.8883"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d={stroke.d}
+          />
+        );
+      })}
     </svg>
   );
 }
