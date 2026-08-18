@@ -2397,5 +2397,6 @@ body.is-resizing {
 
   .boot__hello path {
     animation-duration: 400ms !important;
+    animation-delay: 0ms !important;
   }
 }
